@@ -1,7 +1,7 @@
 """ Tools to read output from SuperclusteringSampleDumper (the CMSSW dumper to produce samples for DNN training) """
 from enum import Enum
 import math
-
+from typing import Union
 import awkward as ak
 import numpy as np
 import pandas as pd
@@ -70,7 +70,7 @@ def highestPtSeedProperties(ar:ak.Array):
         axis=1)
 
 class DNNSampleReader:
-    def __init__(self, file:str|uproot.ReadOnlyDirectory, entry_stop=None, pathInsideFileToTree:str="superclusteringSampleDumper/superclusteringTraining") -> None:
+    def __init__(self, file: Union[str, uproot.ReadOnlyDirectory], entry_stop=None, pathInsideFileToTree: str = "superclusteringSampleDumper/superclusteringTraining") -> None:
         try:
             self.tree = file[pathInsideFileToTree]
         except TypeError:

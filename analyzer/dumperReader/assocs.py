@@ -75,7 +75,74 @@ def assocs_zip_simToReco(assocs_unzipped:ak.Array, simVariant:Literal["CP", "SC"
             "sharedE":assocs_unzipped.tsCLUE3D_simToReco_SC_sharedE})
     else:
         raise ValueError("CP or SC")
+def assocs_zip_recoMergedToSim(assocs_unzipped:ak.Array, simVariant:Literal["CP", "SC"]="CP") -> ak.Array:
+    """ Zip associations array into records
 
+    Parameters : 
+     - assocs_unzipped : the input awkward array
+     - simVariant : can be "CP" (CaloParticle, the default) in which case use associations to SimTrackster from CaloParticles.
+                    can be "SC" (SimCluster) in which case use assocs to SimCluster
+
+    From type: nevts * {
+        tsCLUE3DEM_recoToSim_SC: var * var * uint32,
+        tsCLUE3DEM_recoToSim_SC_score: var * var * float32,
+        tsCLUE3DEM_recoToSim_SC_sharedE: var * var * float32
+    }
+    To type: nevts * var (nbOfTsForCurEvent) * var (nbOfAssocsForCurTs) * {
+        ts_id: int64,
+        caloparticle_id/simcluster_id: uint32,
+        score: float32,
+        sharedE: float32
+    }
+    """
+    if simVariant == "CP":
+        return ak.zip({
+            "ts_id":ak.local_index(assocs_unzipped.Mergetracksters_recoToSim_CP, axis=1),
+            "caloparticle_id":assocs_unzipped.Mergetracksters_recoToSim_CP,
+            "score":assocs_unzipped.Mergetracksters_recoToSim_CP_score,
+            "sharedE":assocs_unzipped.Mergetracksters_recoToSim_CP_sharedE})  
+    elif simVariant == "SC":
+        return ak.zip({
+            "ts_id":ak.local_index(assocs_unzipped.Mergetstracksters_recoToSim_SC, axis=1),
+            "simcluster_id":assocs_unzipped.Mergetstracksters_recoToSim_SC,
+            "score":assocs_unzipped.Mergetstracksters_recoToSim_SC_score,
+            "sharedE":assocs_unzipped.Mergetstracksters_recoToSim_SC_sharedE})
+    else:
+        raise ValueError("CP or SC")
+    
+def assocs_zip_simToRecoMerged(assocs_unzipped:ak.Array, simVariant:Literal["CP", "SC"]="CP") -> ak.Array:
+    """ Zip associations array into records
+    
+    Parameters : 
+     - assocs_unzipped : the input awkward array
+     - simVariant : can be "CP" (CaloParticle, the default) in which case use associations to SimTrackster from CaloParticles.
+                    can be "SC" (SimCluster) in which case use assocs to SimCluster
+    From type: nevts * {
+        tsCLUE3DEM_simToReco_CP: var * var * uint32,
+        tsCLUE3DEM_simToReco_CP_score: var * var * float32,
+        tsCLUE3DEM_simToReco_CP_sharedE: var * var * float32
+    }
+    To type: nevts * var (nbOfCPPerEvent = 2 normally for CP) * var (nbOfAssocsForCurCP) * {
+        caloparticle_id/simcluster_id: int64,
+        ts_id: uint32,
+        score: float32,
+        sharedE: float32
+    }
+    """
+    if simVariant == "CP":
+        return ak.zip({
+            "caloparticle_id":ak.local_index(assocs_unzipped.Mergetracksters_simToReco_CP, axis=1),
+            "ts_id":assocs_unzipped.Mergetracksters_simToReco_CP,
+            "score":assocs_unzipped.Mergetracksters_simToReco_CP_score,
+            "sharedE":assocs_unzipped.Mergetracksters_simToReco_CP_sharedE})
+    elif simVariant == "SC":
+        return ak.zip({
+            "simcluster_id":ak.local_index(assocs_unzipped.Mergetstracksters_simToReco_SC, axis=1),
+            "ts_id":assocs_unzipped.Mergetstracksters_simToReco_SC,
+            "score":assocs_unzipped.Mergetstracksters_simToReco_SC_score,
+            "sharedE":assocs_unzipped.Mergetstracksters_simToReco_SC_sharedE})
+    else:
+        raise ValueError("CP or SC")
 def assocs_dropOnes(assocs_zipped:ak.Array) -> ak.Array:
     """ Drops associations of score one (worst score)
     

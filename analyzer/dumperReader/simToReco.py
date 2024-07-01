@@ -1,6 +1,7 @@
 """ Tools to read recoToSim associations (ie trackster -> SimTrackster) from TICLDumper output """
 import awkward as ak
 import pandas as pd
+from typing import Union
 
 from .assocs import assocs_bestScore, assocs_zip_simToReco
 from .tracksters import trackster_joinSupercluster, tracksters_groupBy, _convertTsToDataframe
@@ -34,7 +35,16 @@ def superclusterAssociatedToSimTracksterCP(supercls:ak.Array, associations:ak.Ar
     return ak.unflatten(ak.from_numpy(merged_df.supercls_id.to_numpy()), ak.run_lengths(ak.from_numpy(merged_df.index.to_numpy())))
 
 
-def CPToTracksterProperties(assocs_bestScore_simToReco_df:pd.DataFrame, tracksters:ak.Array|pd.DataFrame, simTrackstersCP_df:pd.DataFrame):
+def CPToTracksterProperties(assocs_bestScore_simToReco_df:pd.DataFrame, tracksters:Union[ak.Array, pd.DataFrame], simTrackstersCP_df:pd.DataFrame):
+    """ For each CaloParticle, get the best associated trackster properties
+    Parameters :
+     - tracksters : dataframe (or zipped akward array) of tracksters with properties to keep
+    """
+    return (assocs_bestScore_simToReco_df
+        .join(_convertTsToDataframe(tracksters), on=["eventInternal", "ts_id"])
+        .join(simTrackstersCP_df, rsuffix="_CP")
+    )
+def CPToTracksterMergedProperties(assocs_bestScore_simToReco_df:pd.DataFrame, tracksters:Union[ak.Array, pd.DataFrame], simTrackstersCP_df:pd.DataFrame):
     """ For each CaloParticle, get the best associated trackster properties
     Parameters :
      - tracksters : dataframe (or zipped akward array) of tracksters with properties to keep
@@ -45,7 +55,7 @@ def CPToTracksterProperties(assocs_bestScore_simToReco_df:pd.DataFrame, trackste
     )
 
 def getCPToSuperclusterProperties(supercluster_all_df:pd.DataFrame, assocs_bestScore_simToReco_df:pd.DataFrame, 
-            tracksters_all:pd.DataFrame|ak.Array, simTrackstersCP_df:pd.DataFrame) -> pd.DataFrame:
+            tracksters_all:Union[pd.DataFrame, ak.Array], simTrackstersCP_df:pd.DataFrame) -> pd.DataFrame:
     """ Returns the properties of superclusters associated to each CaloParticle of the event 
 
     Parameters :

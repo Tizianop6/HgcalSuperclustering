@@ -2,10 +2,11 @@
 import awkward as ak
 import pandas as pd
 import numpy as np
+from typing import Union
 
 from .assocs import assocs_toDf
 
-trackster_basic_fields = ["ts_id", "raw_energy", "raw_em_energy", "regressed_energy", "raw_pt", "raw_em_pt", "barycenter_eta"]
+trackster_basic_fields = ["ts_id", "raw_energy", "raw_em_energy", "regressed_energy", "raw_pt", "raw_em_pt", "barycenter_eta", "barycenter_phi", 'barycenter_x', 'barycenter_y']
 
 def tracksters_toDf(tracksters:ak.Array) -> pd.DataFrame:
     """ Makes a dataframe with all tracksters
@@ -29,7 +30,7 @@ def tracksters_toDf(tracksters:ak.Array) -> pd.DataFrame:
             raise e
             
 
-def _convertTsToDataframe(tracksters:ak.Array|pd.DataFrame) -> pd.DataFrame:
+def _convertTsToDataframe(tracksters:Union[ak.Array,pd.DataFrame]) -> pd.DataFrame:
     """ COnvert if needed an ak.Array of tracksters to dataframe """
     if isinstance(tracksters, ak.Array):
         return tracksters_toDf(tracksters)
@@ -78,13 +79,13 @@ def tracksters_getSeeds(tracksters_zipped:ak.Array) -> ak.Array:
         axis=1)
 
 
-def supercluster_joinTracksters(supercluster_df:pd.DataFrame, tracksters:pd.DataFrame|ak.Array) -> pd.DataFrame:
+def supercluster_joinTracksters(supercluster_df:pd.DataFrame, tracksters:Union[ak.Array, pd.DataFrame]) -> pd.DataFrame:
     """ Add trackster information to supercluster dataframe """
     tracksters = _convertTsToDataframe(tracksters)
     return supercluster_df.join(tracksters, on=["eventInternal", "ts_id"])
 
-def trackster_joinSupercluster(tracksters:pd.DataFrame|ak.Array, allTracksters:pd.DataFrame|ak.Array,
-            supercluster_df:pd.DataFrame, tracksterColumnsToKeep:list[str]=[]):
+def trackster_joinSupercluster(tracksters: Union[pd.DataFrame, ak.Array], allTracksters: Union[pd.DataFrame, ak.Array],
+            supercluster_df: pd.DataFrame, tracksterColumnsToKeep: list[str] = []) -> pd.DataFrame:
     """ From a trackster, add all the other tracksters in the supercluster 
     
     Tracksters not in a supercluster will be dropped.
@@ -98,15 +99,15 @@ def trackster_joinSupercluster(tracksters:pd.DataFrame|ak.Array, allTracksters:p
     allTracksters = _convertTsToDataframe(allTracksters)
     # merge with superclusters to get supercls_id
     merged_step1 = pd.merge(
-        tracksters[tracksterColumnsToKeep], # we don't want any of the columns here 
+        tracksters[tracksterColumnsToKeep],  # we don't want any of the columns here 
         # use convert_dtypes to avoid converting ids to float when there are missing values
         supercluster_df.reset_index(["supercls_id", "ts_in_supercls_id"]).set_index("ts_id", append=True).convert_dtypes(),
         left_index=True, right_index=True,
-        how="inner" # drops tracksters not in supercls
+        how="inner"  # drops tracksters not in supercls
     )
     # merge again to get all the other tracksters in supercluster
     merged_step2 = (pd.merge(
-            merged_step1, 
+            merged_step1,
             supercluster_df,
             left_on=["eventInternal", "supercls_id"],
             right_on=["eventInternal", "supercls_id"],
@@ -117,7 +118,7 @@ def trackster_joinSupercluster(tracksters:pd.DataFrame|ak.Array, allTracksters:p
 
     # final merge with allTracksters to get trackster properties back
     return pd.merge(
-        merged_step2, 
+        merged_step2,
         allTracksters,
         left_index=True, right_index=True,
         how="inner",
