@@ -66,11 +66,11 @@ class DumperReader:
 
     @property
     def nEvents(self):
-        return self.fileDir["tracksters"].num_entries
+        return self.fileDir["trackstersCLUE3DHigh"].num_entries
 
     @cached_property
     def tracksters(self) -> ak.Array:
-        return self.fileDir["tracksters"].arrays()
+        return self.fileDir["trackstersCLUE3DHigh"].arrays()
 
     @cached_property
     def tracksters_zipped(self) -> ak.Array:
@@ -82,7 +82,23 @@ class DumperReader:
         )
     @cached_property
     def trackstersMerged(self) -> ak.Array:
-        return self.fileDir["trackstersMerged"].arrays()
+        return self.fileDir["trackstersTiclCandidate"].arrays()
+
+    @cached_property
+    def trackstersMergedv4(self) -> ak.Array:
+        return self.fileDir["trackstersmerged"].arrays()
+
+    @cached_property
+    def candidates(self) -> ak.Array:
+        return self.fileDir["candidates"].arrays()
+
+    @cached_property
+    def simCandidates(self) -> ak.Array:
+        return self.fileDir["simTICLCandidate"].arrays()
+
+    @cached_property
+    def tracks(self) -> ak.Array:
+        return self.fileDir["tracks"].arrays()
 
     @cached_property
     def trackstersMerged_zipped(self) -> ak.Array:
@@ -126,7 +142,7 @@ class DumperReader:
 
     @cached_property
     def associations(self) -> ak.Array:
-        return self.fileDir["associations"].arrays(filter_name=["event_", "tsCLUE3D_*", 'Mergetracksters_*', 'Mergetstracksters_*'])
+        return self.fileDir["associations"].arrays(filter_name=["event_", "tsCLUE3D_*", 'ticlCandidate_*', 'Mergetracksters_*'])
 
 
     @cached_property
