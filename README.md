@@ -1,3 +1,8 @@
+# Modified in order to add a script with the aim study the time resolution of HGCAL and MTD at 0 PU
+Script is /analyzer/PerformanceTICLv5/TimeRes_PU0.py.
+
+Also some scripts regarding track pT resolution are present in the same folder. 
+
 # Electron superclustering studies in HGCAL
 Based off Alessandro Tarabini's work
 

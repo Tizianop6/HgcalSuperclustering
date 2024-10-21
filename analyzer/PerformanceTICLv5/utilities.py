@@ -196,7 +196,7 @@ def process_directories_with_prefix(root_dir, prefix, histoDir):
     # Filter directories based on prefix
     target_directories = [os.path.join(root_dir, d+f"/{histoDir}/") for d in directories if d.startswith(prefix)]
     # Process each directory
-    print(target_directories)
+    print("target directories:", target_directories)
     for directory in target_directories:
         reader = DumperInputManager(directory)
         # Do something with reader, for example:

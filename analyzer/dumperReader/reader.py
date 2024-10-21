@@ -113,12 +113,24 @@ class DumperReader:
             with_name="trackstersMerged"
         )
 
+
+
     @cached_property
     def simTrackstersCP(self) -> ak.Array:
-        return self.fileDir["simtrackstersCP"].arrays(filter_name=["event_", "raw_energy", "raw_energy_em", "regressed_energy", "barycenter_*"])
+        return self.fileDir["simtrackstersCP"].arrays(filter_name=["event_", "raw_energy", "raw_energy_em", "regressed_energy","regressed_pt", "barycenter_*",'trackIdx'])
     @cached_property
     def simTrackstersCP_df(self) -> pd.DataFrame:
         return ak.to_dataframe(self.simTrackstersCP, levelname=lambda x : {0:"eventInternal", 1:"caloparticle_id"}[x])
+
+
+
+    @cached_property
+    def simTrackstersSC(self) -> ak.Array:
+        return self.fileDir["simtrackstersSC"].arrays(filter_name=["event_", "raw_energy", "raw_energy_em", "regressed_energy","regressed_pt", "barycenter_*",'trackIdx'])
+    @cached_property
+    def simTrackstersSC_df(self) -> pd.DataFrame:
+        return ak.to_dataframe(self.simTrackstersSC, levelname=lambda x : {0:"eventInternal", 1:"caloparticle_id"}[x])
+
 
     @cached_property
     def superclusters(self) -> ak.Array:
@@ -143,6 +155,10 @@ class DumperReader:
     @cached_property
     def associations(self) -> ak.Array:
         return self.fileDir["associations"].arrays(filter_name=["event_", "tsCLUE3D_*", 'ticlCandidate_*', 'Mergetracksters_*'])
+
+    #@cached_property
+    #def TICLCandidates(self) -> ak.Array:
+    #    return self.fileDir["candidates"].arrays(filter_name=["event_", "candidate_charge", 'candidate_time', 'candidate_energy', 'candidate_raw_energy', 'tracksters_in_candidate','track_in_candidate'])
 
 
     @cached_property
@@ -210,7 +226,25 @@ class DumperReader:
         """
         # Get largest association score
         assocs_simToReco_largestScore = assocs_bestScore(assocs_zip_simToRecoMerged(self.associations))
+
         # Make a df out of it : index eventInternal	ts_id, column : caloparticle_id
+        return  (ak.to_dataframe(assocs_simToReco_largestScore[["ts_id", "caloparticle_id", "score", "sharedE"]],
+                                levelname=lambda x : {0:"eventInternal", 1:"caloparticle_id_wrong"}[x])
+                .reset_index("caloparticle_id_wrong", drop=True)
+                .set_index("caloparticle_id", append=True)
+        )
+
+    @cached_property
+    def assocs_bestScore_simToRecoMerged_wTICL_df(self) -> pd.DataFrame:
+        """ Make a Df of largest score associations of each SimTrackster
+
+        Index eventInternal ts_id, column : caloparticle_id
+        """
+        # Get largest association score
+        #assocs_simToReco_largestScore = assocs_bestScore(assocs_zip_simToRecoMerged(self.associations))
+        assocs_simToReco_largestScore = assocs_bestScore_wTICL(assocs_zip_simToRecoMerged(self.associations),TICLCandidates_zipped(self.candidates))
+        #print(assocs_simToReco_largestScore)
+        # Make a df out of it : index eventInternal ts_id, column : caloparticle_id
         return  (ak.to_dataframe(assocs_simToReco_largestScore[["ts_id", "caloparticle_id", "score", "sharedE"]],
                                 levelname=lambda x : {0:"eventInternal", 1:"caloparticle_id_wrong"}[x])
                 .reset_index("caloparticle_id_wrong", drop=True)
