@@ -1,4 +1,4 @@
-from typing import Iterable, Callable
+from typing import Iterable, Callable, Union
 import functools
 from pathlib import Path
 
@@ -11,7 +11,7 @@ from analyzer.driver.fileTools import Computation, DumperInputManager
 
 
 class DataframeComputation(Computation):
-    def __init__(self, workFct:Callable[[DumperInputManager], pd.DataFrame], key:str|None=None, hdfSettings:dict=dict(), inputMode="ticlDumper") -> None:
+    def __init__(self, workFct:Callable[[DumperInputManager], pd.DataFrame], key:Union[str,None]=None, hdfSettings:dict=dict(), inputMode="ticlDumper") -> None:
         self.workFct = workFct
         self.key = key
         self.hdfSettings = hdfSettings
@@ -20,7 +20,7 @@ class DataframeComputation(Computation):
     def workOnSample(self, *args, **kwargs) -> pd.DataFrame:
         return self.workFct(*args, **kwargs)
     
-    def reduce(self, results: Iterable[pd.DataFrame], store:str|None, nbOfEvents:Iterable[int]):
+    def reduce(self, results: Iterable[pd.DataFrame], store:Union[str,None], nbOfEvents:Iterable[int]):
         # Update the event index so it is unique across batches
         runningEventCount = 0
         for result, cuurentNbOfEvts in zip(results, nbOfEvents):
@@ -47,9 +47,9 @@ class HistogramComputation(Computation):
         self.fillFct = fillFct
         self.paramsForFillFct = paramsForFillFct
     
-    def workOnSample(self, reader: DumperInputManager) -> pd.DataFrame:
+    def workOnSample(self, reader: DumperInputManager) -> hist.Hist:
         self.fillFct(self.h, reader, **self.paramsForFillFct)
         return self.h
     
     def reduce(self, results: Iterable[hist.Hist], store:pd.HDFStore=None, nbOfEvents:Iterable[int]=None) -> hist.Hist:
-        return sum(results)
+        return sum(results, hist.Hist())

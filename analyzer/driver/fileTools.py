@@ -5,13 +5,13 @@ from itertools import islice
 from functools import cached_property
 from collections import defaultdict
 import warnings
-from typing import Iterable, Callable
+from typing import Iterable, Callable, Union, List, Dict, Tuple
 from enum import Enum
 
 import uproot
 import pandas as pd
 from tqdm.auto import tqdm 
-
+import os
 from analyzer.dumperReader.reader import DumperReader, Step3Reader, FWLiteDataframesReader
 from analyzer.dumperReader.dnnSampleReader import DNNSampleReader
 
@@ -24,6 +24,12 @@ DNNDataframes : output of the FWLite dumper
 """
 
 def _dumperTypesFromFile(filePath:Path) -> list[DumperType]:
+    strpath=str(filePath)
+    strpath=strpath.split(os.sep)
+    singleInputFolder = "root://eoscms.cern.ch//eos/cms/store/group/dpg_hgcal/comm_hgcal/wredjeb/TICLv5Performance/TimeResolutionFinal200PU/"+strpath[-3]+"/"+strpath[-2] + "/" + strpath[-1]
+    #print(singleInputFolder)
+    filePath=singleInputFolder
+    #filePath=Path(singleInputFolder)
     """ Open a file and look for what kind of dumper it is """
     res = []
     with uproot.open(filePath) as file:
@@ -40,7 +46,7 @@ def _dumperTypesFromFile(filePath:Path) -> list[DumperType]:
         if "Events" in fileKeys:
             res.append(DumperType.DNNStep3)
     return res
-
+    
         
 class SingleInputReader:
     def __init__(self, sampleNb=None) -> None:
@@ -52,16 +58,23 @@ class SingleInputReader:
     def addFile(self, path:Path, dumperTypes:list[DumperType]) -> None:
         for dumperType in dumperTypes:
             if dumperType in self._paths:
-                warnings.warn(f"Duplicate {dumperType} in {self._paths[dumperType]} and {path}")
+                warning = f"Duplicate {dumperType} in {self._paths[dumperType]} and {path}"
+                warnings.warn(warning)
                 #raise RuntimeError(f"Duplicate {dumperType} in {self._paths[dumperType]} and {path}")
             self._paths[dumperType] = path
 
     def _openFile(self, dumperType:DumperType):
         path = self._paths[dumperType]
+        strpath=str(path)
+        strpath=strpath.split(os.sep)
+        singleInputFolder = "root://eoscms.cern.ch//eos/cms/store/group/dpg_hgcal/comm_hgcal/wredjeb/TICLv5Performance/TimeResolutionFinal200PU/"+strpath[-3]+"/"+strpath[-2] + "/" + strpath[-1]
+        #print(singleInputFolder)
+        path=singleInputFolder
+    
         file = uproot.open(str(path))
-        for otherDumperType, otherPath in self._paths.items():
-            if path == otherPath:
-                self._files[otherDumperType] = file
+        # for otherDumperType, otherPath in self._paths.items():
+            #if path == otherPath:
+            #    self._files[otherDumperType] = file
         return file
 
     def getFileForDumperType(self, dumperType:DumperType):
@@ -137,7 +150,9 @@ class Computation:
 
 
 class DumperInputManager:
-    def __init__(self, inputFolder:str|list[str]|dict[DumperType|tuple[DumperType], str], limitFileCount=None, restrictToAvailableDumperTypes:list[DumperType]=None) -> None:
+    def __init__(self, inputFolder: Union[str, List[str], Dict[Union[DumperType, Tuple[DumperType]], str]],
+                 limitFileCount: int = None,
+                 restrictToAvailableDumperTypes: List[DumperType] = None) -> None:
         """ 
         Parameters : 
             - inputFolder : can be a folder or list of folders. In case of list, for the same sampleId, the items later in the list take priority 
@@ -145,12 +160,13 @@ class DumperInputManager:
         """
         #pattern_dumper = re.compile(r"[a-zA-Z_\-0-9]{0,}[dD]umper_([0-9]{1,})\.root")
         pattern_dumper = re.compile(r"[a-zA-Z_\-0-9]{1,}_([0-9]{1,})\.root")
-        self.inputPerSample:dict[int, SingleInputReader] = dict()
+        self.inputPerSample: Dict[int, SingleInputReader] = dict()
 
-        if isinstance(inputFolder, dict): # dict mode
+        if isinstance(inputFolder, dict):  # dict mode
             for dumperTypesForFolder_iter, singleInputFolder in inputFolder.items():
-                dumperTypesForFolder = set([dumperTypesForFolder_iter]) if isinstance(dumperTypesForFolder_iter, DumperType) else set(dumperTypesForFolder_iter) 
+                dumperTypesForFolder = {dumperTypesForFolder_iter} if isinstance(dumperTypesForFolder_iter, DumperType) else set(dumperTypesForFolder_iter)
                 singleInputFolder = Path(singleInputFolder)
+                #singel
                 assert singleInputFolder.is_dir(), "Input should be a folder or list of folders in folder mode"
                 for child in singleInputFolder.iterdir():
                     try:
@@ -164,17 +180,15 @@ class DumperInputManager:
                         except Exception as e:
                             print(e)
                     except AttributeError:
-                        pass # file does not match pattern
+                        pass  # file does not match pattern
                     except Exception as e:
                         print("Exception occurred whilst reading file " + str(child) + " : " + str(e))
 
         else:
             # folder mode
             if isinstance(inputFolder, str):
-                inputFolder = [inputFolder] 
-            
-            
-            
+                inputFolder = [inputFolder]
+
             for singleInputFolder in inputFolder:
                 singleInputFolder = Path(singleInputFolder)
                 assert singleInputFolder.is_dir(), "Input should be a folder or list of folders in folder mode"
@@ -190,13 +204,13 @@ class DumperInputManager:
                         except Exception as e:
                             print(e)
                     except AttributeError:
-                        pass # file does not match pattern
+                        pass  # file does not match pattern
                     except Exception as e:
                         print("Exception occurred whilst reading file " + str(child) + " : " + str(e))
-            
+
             if restrictToAvailableDumperTypes is not None:
                 self.restrictToAvailableTypes(restrictToAvailableDumperTypes)
-            
+
         if limitFileCount is not None:
             self.inputPerSample = dict(islice(self.inputPerSample.items(), limitFileCount))
         
@@ -223,7 +237,9 @@ def _map_fcn(input:SingleInputReader, computations:list[Computation]) -> list:
         raise RuntimeError("uproot.DeserializationError was raised in worker process whilst processing file " + str(input.sampleNb) + "\nThe message was " + str(e))
 
 
-def runComputations(computations:list[Computation], inputManager:DumperInputManager|list[SingleInputReader], store:pd.HDFStore|None=None, max_workers=10):
+from typing import Union
+
+def runComputations(computations:list[Computation], inputManager:Union[DumperInputManager, list[SingleInputReader]], store:Union[pd.HDFStore, None]=None, max_workers=10):
     """ Run the list of computations given, eventually in parallel
     
     Parameters : 

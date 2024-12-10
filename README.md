@@ -1,3 +1,7 @@
+# With scripts regarding the study of ETL and HGCAL time resolution at PU = 200. 
+There has been a modification in the data input process, in order to read EOS files using xrootd. 
+The scripts useful for the time resolution reside in BinnedTimeResMTOnlyPV_pT.py for the computation and then BinnedTimeResOnlyPlotsFromPV_pT.py in order to construct the plots. Other variations are present in the analyzer/PerformanceTICLv5 folder.
+
 # Electron superclustering studies in HGCAL
 Based off Alessandro Tarabini's work
 
